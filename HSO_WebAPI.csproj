@@ -136,8 +136,8 @@
   <ItemGroup>
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
-    <Compile Include="Controllers\APIController.cs" />
-    <Compile Include="Controllers\RegisterRequest.cs" />
+    <Compile Include="Controller\APIController.cs" />
+    <Compile Include="Controller\RegisterRequest.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -179,7 +179,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>55771</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>https://localhost:55555/</IISUrl>
+          <IISUrl>http://localhost:55555/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

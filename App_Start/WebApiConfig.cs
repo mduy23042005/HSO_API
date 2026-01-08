@@ -10,7 +10,7 @@ public static class WebApiConfig
 
         // Route mặc định
         config.Routes.MapHttpRoute(
-            name: "HSOApi",
+            name: "HSO_WebAPI",
             routeTemplate: "api/{controller}/{id}",
             defaults: new { id = RouteParameter.Optional }
         );
