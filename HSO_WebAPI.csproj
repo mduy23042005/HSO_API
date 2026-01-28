@@ -54,7 +54,7 @@
     </Reference>
     <Reference Include="HSOEntities, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\HSOEntities\bin\Debug\HSOEntities.dll</HintPath>
+      <HintPath>..\..\HSOEntities\bin\Debug\HSOEntities.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System" />

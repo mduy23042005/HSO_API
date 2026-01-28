@@ -1,5 +1,22 @@
-﻿using System.Linq;
+﻿using HSOEntities.Models;
+using System.Collections.Generic;
+using System.Linq;
 using System.Web.Http;
+
+public class NPCData
+{
+    public NPC npcs;
+}
+public class MobData
+{
+    public Mob mobs;
+}
+public class MapData
+{
+    public Map maps;
+    public List<Map_Mob> map_Mobs;
+    public List<Map_NPC> map_NPCs;
+}
 
 public class APIController : ApiController
 {
@@ -9,6 +26,158 @@ public class APIController : ApiController
         db.Configuration.ProxyCreationEnabled = false; // không tạo proxy
         db.Configuration.LazyLoadingEnabled = false;  // không lazy load
     }
+
+    #region Load basic data
+    [HttpGet]
+    [Route("api/load/NPC/full")]
+    public IHttpActionResult LoadNPCFull()
+    {
+        var npcList = db.NPCs.ToList();
+        if (npcList == null || !npcList.Any())
+            return NotFound();
+        return Ok(npcList);
+    }
+
+    [HttpGet]
+    [Route("api/load/Mob/full")]
+    public IHttpActionResult LoadMobFull()
+    {
+        var mobList = db.Mobs.ToList();
+        if (mobList == null || !mobList.Any())
+            return NotFound();
+        return Ok(mobList);
+    }
+
+    [HttpGet]
+    [Route("api/load/Map/full")]
+    public IHttpActionResult LoadMapFull()
+    {
+        var mapList = db.Maps.ToList();
+        var mapMobs = db.Map_Mob.ToList();
+        var mapNpcs = db.Map_NPC.ToList();
+
+        var mapData = mapList.Select(m => new MapData
+        {
+            maps = m,
+            map_Mobs = mapMobs.Where(x => x.IDMap == m.IDMap).ToList(),
+            map_NPCs = mapNpcs.Where(x => x.IDMap == m.IDMap).ToList()
+        }).ToList();
+
+        return Ok(mapData);
+    }
+
+    [HttpGet]
+    [Route("api/load/Item0/full")]
+    public IHttpActionResult LoadItem0Full()
+    {
+        var item0List = db.Item0.ToList();
+        var itemAttrs = db.Item0_Attribute.ToList();
+        var attributes = db.Attributes.ToList();
+
+        var item0Data = item0List.Select(item => new
+        {
+            item0 = new
+            {
+                item.IDItem0,
+                item.NameItem0,
+                item.TypeItem0,
+                item.IDSchool
+            },
+            item0_Attributes = itemAttrs
+                .Where(a => a.IDItem0 == item.IDItem0 && a.Category == 1)
+                .Select(a => new
+                {
+                    a.IDAttribute,
+                    a.Value,
+                    a.Category
+                })
+                .ToList(),
+            nameAttributes = (
+                from a in itemAttrs
+                join attr in attributes on a.IDAttribute equals attr.IDAttribute
+                where a.IDItem0 == item.IDItem0
+                select new
+                {
+                    attr.IDAttribute,
+                    attr.NameAttribute
+                }
+            ).Distinct().ToList()
+        }).ToList();
+
+        return Ok(item0Data);
+    }
+
+    [HttpGet]
+    [Route("api/load/Item1/full")]
+    public IHttpActionResult LoadItem1Full()
+    {
+        var item1List = db.Item1.ToList();
+        var itemAttrs = db.Item1_Attribute.ToList();
+        var attributes = db.Attributes.ToList();
+
+        var item1Data = item1List.Select(item => new
+        {
+            item1 = new
+            {
+                item.IDItem1,
+                item.NameItem1,
+                item.TypeItem1,
+            },
+            item1_Attributes = itemAttrs
+                .Where(a => a.IDItem1 == item.IDItem1 && a.Category == 1)
+                .Select(a => new
+                {
+                    a.IDAttribute,
+                    a.Value,
+                    a.Category
+                })
+                .ToList(),
+            nameAttributes = (
+                from a in itemAttrs
+                join attr in attributes on a.IDAttribute equals attr.IDAttribute
+                where a.IDItem1 == item.IDItem1
+                select new
+                {
+                    attr.IDAttribute,
+                    attr.NameAttribute
+                }
+            ).Distinct().ToList()
+        }).ToList();
+
+        return Ok(item1Data);
+    }
+
+    [HttpGet]
+    [Route("api/load/Item2/full")]
+    public IHttpActionResult LoadItem2Full()
+    {
+        var item2List = db.Item2.ToList();
+        if (item2List == null || !item2List.Any())
+            return NotFound();
+        return Ok(item2List);
+    }
+
+    [HttpGet]
+    [Route("api/load/Item3/full")]
+    public IHttpActionResult LoadItem3Full()
+    {
+        var item3List = db.Item3.ToList();
+        if (item3List == null || !item3List.Any())
+            return NotFound();
+        return Ok(item3List);
+    }
+
+    [HttpGet]
+    [Route("api/load/Item4/full")]
+    public IHttpActionResult LoadItem4Full()
+    {
+        var item4List = db.Item4.ToList();
+        if (item4List == null || !item4List.Any())
+            return NotFound();
+
+        return Ok(item4List);
+    }
+    #endregion
 
     [HttpGet]
     [Route("api/account/login")]
@@ -40,7 +209,7 @@ public class APIController : ApiController
         var newAccount = request.Account;
         db.Accounts.Add(newAccount);
 
-        // Tạo inventory khởi đầu và thêm vào bảng
+        // Tạo inventory khởi đầu và thêm vào bảng lúc register
         var newInventory = new HSOEntities.Models.Account_Item0
         {
             IDAccount = newAccount.IDAccount,  // gán IDAccount vừa tạo
@@ -65,128 +234,179 @@ public class APIController : ApiController
         });
     }
 
+    #region Load equipment data
     [HttpGet]
     [Route("api/account/{idAccount}/equipment")]
     public IHttpActionResult Equipment(int idAccount)
     {
-        var item0_1 = db.Account_Equipment
-            .Where(x => x.IDAccount == idAccount)
-            .Select(x => new
-            {
-                id = x.ID,
-                idItem0_1 = x.IDItem0_1,
-                category = x.Category,
-            })
-            .ToList();
+        var equipments = db.Account_Equipment.Where(x => x.IDAccount == idAccount).ToList();
 
-        if (!item0_1.Any())
+        if (!equipments.Any())
             return NotFound();
 
-        return Ok(item0_1);
-    }
+        var itemAttrs = db.Item0_Attribute.ToList();
+        var attributes = db.Attributes.ToList();
 
-    #region Đọc Attribute từ equipment
-    [HttpGet]
-    [Route("api/account/{idAccount}/equipItem/{id}/listAttributes")]
-    public IHttpActionResult EquipmentListAttribute(int id)
-    {
-        /*
-        var id = db.Account_Equipment.Where(x => x.IDItem0_1 == idItem).Select(x => x.ID).FirstOrDefault();
+        var result = equipments.Select(eq => new
+        {
+            id = eq.ID,
+            idItem0_1 = eq.IDItem0_1,
+            nameItem0_1 = db.Item0.Where(i => i.IDItem0 == eq.IDItem0_1).Select(i => i.NameItem0).FirstOrDefault(),
+            category = eq.Category,
+            slotName = eq.SlotName,
 
-        //Tạm thời sẽ lấy Attribute từ bảng Item0_Attribute
-        var listAttributes = db.Account_Equipment_Attribute.Where(x => x.IDAccountEquipment == id).ToList();
-        */
+            item0_Attributes = itemAttrs
+                .Where(a =>
+                    a.IDItem0 == eq.IDItem0_1 &&
+                    a.Category == eq.Category)
+                .Select(a => new
+                {
+                    a.IDAttribute,
+                    a.Value,
+                    a.Category
+                })
+                .ToList(),
 
-        var idItem0_1 = db.Account_Equipment.Where(x => x.ID == id).Select(x => x.IDItem0_1).FirstOrDefault();
-        var category = db.Account_Equipment.Where(x => x.ID == id).Select(x => x.Category).FirstOrDefault();
+            nameAttributes = (
+                from a in itemAttrs
+                join attr in attributes on a.IDAttribute equals attr.IDAttribute
+                where a.IDItem0 == eq.IDItem0_1
+                select new
+                {
+                    attr.IDAttribute,
+                    attr.NameAttribute
+                }
+            ).Distinct().ToList()
+        }).ToList();
 
-        var nameItem = db.Item0.Where(x => x.IDItem0 == idItem0_1).Select(x => x.NameItem0).FirstOrDefault();
-
-        var listAttributes = db.Item0_Attribute.Where(x => x.IDItem0 == idItem0_1 && x.Category == category)
-            .Select(x => new
-            {
-                idItem0_1,
-                category,
-                nameItem,
-                x.Value,
-                x.IDAttribute
-            }).ToList();
-
-        if (!listAttributes.Any())
-            return NotFound();
-        
-        return Ok(listAttributes);
-    }
-    [HttpGet]
-    [Route("api/account/{idAccount}/equipItem/{idItem0_1}/listAttributes/{idAttribute}")]
-    public IHttpActionResult EquipmentNameAttribute(int idAttribute)
-    {
-        var nameAttributes = db.Attributes.Where(x => x.IDAttribute == idAttribute).Select(x => x.NameAttribute).FirstOrDefault();
-
-        if (string.IsNullOrEmpty(nameAttributes))
-            return NotFound();
-
-        return Ok(nameAttributes);
+        return Ok(result);
     }
     #endregion
 
+    #region Load inventory data
     [HttpGet]
-    [Route("api/account/{idAccount}/inventory")]
-    public IHttpActionResult Inventory(int idAccount)
+    [Route("api/account/{idAccount}/inventoryItem0")]
+    public IHttpActionResult InventoryItem0(int idAccount)
     {
-        var item0 = db.Account_Item0.Where(x => x.IDAccount == idAccount)
-            .Select(i => new 
-            { 
-                id = i.ID,
-                idItem0 = i.IDItem0, 
-                category = i.Category,
-                typeItem0 = i.Item0.TypeItem0,
-                idSchool = i.Item0.IDSchool
-            })
-            .ToList();
+        var inventory = db.Account_Item0.Where(x => x.IDAccount == idAccount).ToList();
 
-        if (item0 == null)
+        if (!inventory.Any())
             return NotFound();
 
-        return Ok(item0);
+        var item0List = db.Item0.ToList();
+        var itemAttrs = db.Item0_Attribute.ToList();
+        var attributes = db.Attributes.ToList();
+
+        var inventoryData = inventory.Select(inv => new
+        {
+            id = inv.ID,
+            idItem0 = inv.IDItem0,
+            nameItem0 = item0List.First(i => i.IDItem0 == inv.IDItem0).NameItem0,
+            typeItem0 = item0List.First(i => i.IDItem0 == inv.IDItem0).TypeItem0,
+            category = item0List.First(i => i.IDItem0 == inv.IDItem0).Level,
+            idschool = item0List.First(i => i.IDItem0 == inv.IDItem0).IDSchool,
+
+            item0_Attributes = itemAttrs
+                .Where(a => a.IDItem0 == inv.IDItem0 && a.Category == inv.Category)
+                .Select(a => new
+                {
+                    a.IDAttribute,
+                    a.Value,
+                    a.Category
+                })
+                .ToList(),
+            nameAttributes = (
+                from a in itemAttrs
+                join attr in attributes on a.IDAttribute equals attr.IDAttribute
+                where a.IDItem0 == inv.IDItem0
+                select new
+                {
+                    attr.IDAttribute,
+                    attr.NameAttribute
+                }
+            ).Distinct().ToList()
+        }).ToList();
+
+        return Ok(inventoryData);
     }
 
-    #region Đọc Attribute từ inventory
     [HttpGet]
-    [Route("api/account/{idAccount}/inventoryItem/{id}/listAttributes")]
-    public IHttpActionResult InventoryListAttribute(int id)
+    [Route("api/account/{idAccount}/inventoryItem1")]
+    public IHttpActionResult InventoryItem1(int idAccount)
     {
-        var idItem0 = db.Account_Item0.Where(x => x.ID == id).Select(x => x.IDItem0).FirstOrDefault();
-        var category = db.Account_Item0.Where(x => x.ID == id).Select(x => x.Category).FirstOrDefault();
+        var inventory = db.Account_Item1.Where(x => x.IDAccount == idAccount).ToList();
 
-        var nameItem = db.Item0.Where(x => x.IDItem0 == idItem0).Select(x => x.NameItem0).FirstOrDefault();
-
-        //Tạm thời sẽ lấy Attribute từ bảng Item0_Attribute
-        var listAttributes = db.Item0_Attribute.Where(x => x.IDItem0 == idItem0 && x.Category == category)
-            .Select(x => new
-            {
-                idItem0,
-                category,
-                nameItem,
-                value = x.Value,
-                idAttribute = x.IDAttribute
-            }).ToList();
-
-        if (!listAttributes.Any())
+        if (!inventory.Any())
             return NotFound();
 
-        return Ok(listAttributes);
+        var item1List = db.Item1.ToList();
+        var itemAttrs = db.Item1_Attribute.ToList();
+        var attributes = db.Attributes.ToList();
+
+        var inventoryData = inventory.Select(inv => new
+        {
+            idItem1 = inv.IDItem1,
+            nameItem1 = item1List.First(i => i.IDItem1 == inv.IDItem1).NameItem1,
+            typeItem1 = item1List.First(i => i.IDItem1 == inv.IDItem1).TypeItem1,
+
+            item1_Attributes = itemAttrs
+                .Where(a => a.IDItem1 == inv.IDItem1 && a.Category == 1)
+                .Select(a => new
+                {
+                    a.IDAttribute,
+                    a.Value,
+                    a.Category
+                })
+                .ToList(),
+            nameAttributes = (
+                from a in itemAttrs
+                join attr in attributes on a.IDAttribute equals attr.IDAttribute
+                where a.IDItem1 == inv.IDItem1
+                select new
+                {
+                    attr.IDAttribute,
+                    attr.NameAttribute
+                }
+            ).Distinct().ToList()
+        }).ToList();
+
+        return Ok(inventoryData);
     }
-    [HttpGet]
-    [Route("api/account/{idAccount}/inventoryItem/{id}/listAttributes/{idAttribute}")]
-    public IHttpActionResult InventoryNameAttribute(int idAttribute)
-    {
-        var nameAttributes = db.Attributes.Where(x => x.IDAttribute == idAttribute).Select(x => x.NameAttribute).FirstOrDefault();
 
-        if (string.IsNullOrEmpty(nameAttributes))
+    [HttpGet]
+    [Route("api/account/{idAccount}/inventoryItem2")]
+    public IHttpActionResult InventoryItem2(int idAccount)
+    {
+        var item2 = db.Account_Item2.Where(x => x.IDAccount == idAccount).ToList();
+
+        if (!item2.Any())
             return NotFound();
 
-        return Ok(nameAttributes);
+        return Ok(item2);
+    }
+
+    [HttpGet]
+    [Route("api/account/{idAccount}/inventoryItem3")]
+    public IHttpActionResult InventoryItem3(int idAccount)
+    {
+        var item3 = db.Account_Item3.Where(x => x.IDAccount == idAccount).ToList();
+
+        if (!item3.Any())
+            return NotFound();
+
+        return Ok(item3);
+    }
+
+    [HttpGet]
+    [Route("api/account/{idAccount}/inventoryItem4")]
+    public IHttpActionResult InventoryItem4(int idAccount)
+    {
+        var item4 = db.Account_Item4.Where(x => x.IDAccount == idAccount).ToList();
+
+        if (!item4.Any())
+            return NotFound();
+
+        return Ok(item4);
     }
     #endregion
 
