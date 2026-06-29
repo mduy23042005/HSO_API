@@ -1,26 +1,10 @@
-﻿using HSOEntities.Models;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Web.Http;
-
-public class NPCData
-{
-    public NPC npcs;
-}
-public class MobData
-{
-    public Mob mobs;
-}
-public class MapData
-{
-    public Map maps;
-    public List<Map_Mob> map_Mobs;
-    public List<Map_NPC> map_NPCs;
-}
 
 public class APIController : ApiController
 {
     private HSOEntities.Models.HSOEntities db = new HSOEntities.Models.HSOEntities();
+
     public APIController()
     {
         db.Configuration.ProxyCreationEnabled = false; // không tạo proxy
@@ -29,26 +13,6 @@ public class APIController : ApiController
 
     #region Load basic data
     [HttpGet]
-    [Route("api/load/NPC/full")]
-    public IHttpActionResult LoadNPCFull()
-    {
-        var npcList = db.NPCs.ToList();
-        if (npcList == null || !npcList.Any())
-            return NotFound();
-        return Ok(npcList);
-    }
-
-    [HttpGet]
-    [Route("api/load/Mob/full")]
-    public IHttpActionResult LoadMobFull()
-    {
-        var mobList = db.Mobs.ToList();
-        if (mobList == null || !mobList.Any())
-            return NotFound();
-        return Ok(mobList);
-    }
-
-    [HttpGet]
     [Route("api/load/Map/full")]
     public IHttpActionResult LoadMapFull()
     {
@@ -56,11 +20,49 @@ public class APIController : ApiController
         var mapMobs = db.Map_Mob.ToList();
         var mapNpcs = db.Map_NPC.ToList();
 
-        var mapData = mapList.Select(m => new MapData
+        var mapData = mapList.Select(map => new
         {
-            maps = m,
-            map_Mobs = mapMobs.Where(x => x.IDMap == m.IDMap).ToList(),
-            map_NPCs = mapNpcs.Where(x => x.IDMap == m.IDMap).ToList()
+            map = new
+            {
+                map.IDMap,
+                map.NameMap,
+            },
+
+            mobsData =
+                (from mm in db.Map_Mob
+                 join mob in db.Mobs on mm.IDMob equals mob.IDMob
+                 where mm.IDMap == map.IDMap
+                 select new
+                 {
+                     mob = new
+                     {
+                         mob.IDMob,
+                         mob.NameMob,
+                         mob.Boss,
+                         mob.Level,
+                         mob.HP
+                     },
+
+                     id = mm.ID,
+                     posX = mm.PosX,
+                     posY = mm.PosY,
+                 }).ToList(),
+
+            npcsData =
+                (from mn in db.Map_NPC
+                 join npc in db.NPCs on mn.IDNPC equals npc.IDNPC
+                 where mn.IDMap == map.IDMap
+                 select new
+                 {
+                     npc = new
+                     {
+                         npc.IDNPC,
+                         npc.NameNPC,
+                     },
+
+                     posX = mn.PosX,
+                     posY = mn.PosY
+                 }).ToList()
         }).ToList();
 
         return Ok(mapData);
